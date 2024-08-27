@@ -51,7 +51,6 @@ const Home = () => {
     setPosting((posting) => !posting)
   }
 
-  console.log(siso.userInfo);
 
   return (
     <>
@@ -149,7 +148,7 @@ const Home = () => {
         <MakeAPost />
       </div>
       <div className={`phposting ${posting ? "phposting active2" : ""}`}>
-        <PostForm togglePostForm={togglePostForm} />
+        <PostForm togglePostForm={togglePostForm} deadline={null} />
       </div>
     </>
   );
