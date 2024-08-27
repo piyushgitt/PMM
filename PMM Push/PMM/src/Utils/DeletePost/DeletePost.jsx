@@ -1,11 +1,15 @@
-import React from "react";
-import "./DeletePost.css";
+import React from 'react'
+import './DeletePost.css'
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import {
-  faCircleExclamation,
-  faXmark,
-} from "@fortawesome/free-solid-svg-icons";
-const DeletePost = ({ handlePage }) => {
+import { faCircleExclamation, faXmark } from '@fortawesome/free-solid-svg-icons';
+import { useSiso } from '../../Context/siso';
+const DeletePost = ({ handlePage, postId }) => {
+  const siso = useSiso();
+  const handleDeletePost = async () => {
+    await siso.deleteMotives(postId);
+    handlePage();
+    alert('successfully deleted. Kindly refresh your page to see changes');
+  };
   return (
     <>
       <div className="udpmain">
@@ -31,7 +35,12 @@ const DeletePost = ({ handlePage }) => {
         />
         <div className="udpwarningbtns">
           <div className="udpwarningdelete">
-            <button className="udpwarningdelete">Yes</button>
+            <button
+              className="udpwarningdelete"
+              onClick={() => {handleDeletePost()}}
+            >
+              Yes
+            </button>
           </div>
           <div className="udpwarningcancel">
             <button className="udpwarningcancel" onClick={handlePage}>
@@ -44,4 +53,4 @@ const DeletePost = ({ handlePage }) => {
   );
 };
 
-export default DeletePost;
+export default DeletePost
