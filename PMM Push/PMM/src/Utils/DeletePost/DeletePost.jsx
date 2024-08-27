@@ -1,7 +1,10 @@
-import React from 'react'
-import './DeletePost.css'
+import React from "react";
+import "./DeletePost.css";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faCircleExclamation, faXmark } from '@fortawesome/free-solid-svg-icons';
+import {
+  faCircleExclamation,
+  faXmark,
+} from "@fortawesome/free-solid-svg-icons";
 const DeletePost = ({ handlePage }) => {
   return (
     <>
@@ -31,7 +34,9 @@ const DeletePost = ({ handlePage }) => {
             <button className="udpwarningdelete">Yes</button>
           </div>
           <div className="udpwarningcancel">
-            <button className="udpwarningcancel" onClick={handlePage}>Cancel</button>
+            <button className="udpwarningcancel" onClick={handlePage}>
+              Cancel
+            </button>
           </div>
         </div>
       </div>
@@ -39,4 +44,4 @@ const DeletePost = ({ handlePage }) => {
   );
 };
 
-export default DeletePost
+export default DeletePost;
