@@ -13,6 +13,7 @@ import {
   faPencil,
   faCalendarDays,
   faShare,
+  faSmile
 } from "@fortawesome/free-solid-svg-icons";
 import { useNavigate } from "react-router-dom";
 import Share from "../../Utils/Share/Share";
@@ -23,34 +24,31 @@ import PostCards from "../../Utils/PostCards/PostCards";
 import Navbar from "../../Components/Navbar/Navbar";
 import Congrats from "../../Utils/Congrats/Congrats";
 
-
-
-
 const MyPosts = () => {
   const siso = useSiso();
-  const [isHome, setHome] = useState(true);
-  const [isPost, setPost] = useState(false);
+  const [isHome, setHome] = useState(false);
+  const [isPost, setPost] = useState(true);
   const [isSearch, setSearch] = useState(false);
   const [isNotification, setNotification] = useState(false);
   const [isProfile, setProfile] = useState(false);
   const [deactivated, setDeactivated] = useState(false);
   const [isEditing, setEditing] = useState(false);
-  const [isDeleting , setDeleting] = useState(false);
-  const [isDeadline , setDeadline] = useState(false);
-  const [isShare , setShare] = useState(false);
-  const [showHeading , setShowHeading] = useState(true);
+  const [isDeleting, setDeleting] = useState(false);
+  const [isDeadline, setDeadline] = useState(false);
+  const [isShare, setShare] = useState(false);
+  const [showHeading, setShowHeading] = useState(true);
   const [isCongrats, setIsCongrats] = useState(false);
-  const [postId , setPostId] = useState();
-  const [currentpost , setCurrentPost] = useState();
+  const [postId, setPostId] = useState();
+  const [destination, setDestination] = useState();
+  const [currentpost, setCurrentPost] = useState();
 
-  const setIconFalse = () => {
-    setHome(false);
-    setPost(false);
-    setSearch(false);
-    setNotification(false);
-    setProfile(false);
-  };
   const navigate = useNavigate();
+
+  useEffect(() => {
+    navigate(destination);
+  }, [destination]);
+
+
   const handleSignOut = () => {
     siso.sign_out();
     navigate("/");
@@ -70,10 +68,10 @@ const MyPosts = () => {
     setShare(false);
     setIsCongrats(false);
   };
-  const handleCongrats = async() => {
-    if(!currentpost.accomplished)await siso.accomplished(currentpost.postId);
+  const handleCongrats = async () => {
+    if (!currentpost.accomplished) await siso.accomplished(currentpost.postId);
     setIsCongrats(true);
-  }
+  };
   return (
     <>
       <div className="pmpmainContainer">
@@ -81,8 +79,7 @@ const MyPosts = () => {
           <div
             className={`${isHome ? "phnvicon active" : "phnvicon"}`}
             onClick={() => {
-              setIconFalse();
-              setHome(true);
+              setDestination("/home");
             }}
           >
             <FontAwesomeIcon icon={faHome} />
@@ -90,8 +87,7 @@ const MyPosts = () => {
           <div
             className={`${isPost ? "phnvicon active" : "phnvicon"}`}
             onClick={() => {
-              setIconFalse();
-              setPost(true);
+              setDestination("/myposts");
             }}
           >
             <FontAwesomeIcon icon={faCloud} />
@@ -99,8 +95,7 @@ const MyPosts = () => {
           <div
             className={`${isSearch ? "phnvicon active" : "phnvicon"}`}
             onClick={() => {
-              setIconFalse();
-              setSearch(true);
+              setDestination("/search");
             }}
           >
             <FontAwesomeIcon icon={faMagnifyingGlass} />
@@ -108,8 +103,7 @@ const MyPosts = () => {
           <div
             className={`${isNotification ? "phnvicon active" : "phnvicon"}`}
             onClick={() => {
-              setIconFalse();
-              setNotification(true);
+              setDestination("/notification");
             }}
           >
             <FontAwesomeIcon icon={faEnvelope} />
@@ -117,8 +111,7 @@ const MyPosts = () => {
           <div
             className={`${isProfile ? "phnvicon active" : "phnvicon"}`}
             onClick={() => {
-              setIconFalse();
-              setProfile(true);
+              setDestination("/profile");
             }}
           >
             <FontAwesomeIcon icon={faUser} />
