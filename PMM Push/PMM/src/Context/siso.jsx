@@ -69,8 +69,8 @@ export const SisoProvider = (props) => {
   const [usersLiked, setUsersLiked] = useState([]);
   const [refreshFeed, setRefreshFeed] = useState(false);
   const [allComments, setAllComments] = useState([]);
-  const [allUsers , setAllUsers] = useState([]);
-
+  const [allUsers, setAllUsers] = useState([]);
+  // const [peerInfo, setPeerInfo] = useState();
 
   //adding user name and email to his database
   const add_user = async ({ ...userData }) => {
@@ -85,6 +85,7 @@ export const SisoProvider = (props) => {
       await uploadBytesResumable(storageRef, userData.profilePic).then(() => {
         getDownloadURL(storageRef).then(async (downloadURL) => {
           await setDoc(userDocRef, {
+            uniqueUserName: userData.email.split('@')[0],
             first_name: userData.firstName,
             last_name: userData.lastName,
             email: userData.email,
@@ -94,6 +95,8 @@ export const SisoProvider = (props) => {
             peers: [],
             joinedOn: `${day}-${month}-${year}`,
             supportive: 0,
+            supportiveMarkedBy: [],
+            supportiveMarkedTo: [],
           });
         });
       });
@@ -101,6 +104,50 @@ export const SisoProvider = (props) => {
       alert("Error while adding document");
       console.log(error);
     }
+  };
+
+  //handling supportive marking
+  const handleSupportiveMarking = async (peerId) => {
+    if (userInfo.email === peerId) return;
+    const peerDocRef = doc(userInfodb, "users", peerId);
+    const peerDoc = await getDoc(peerDocRef);
+    const userDocRef = doc(userInfodb, "users", userInfo.email);
+    const userDoc = await getDoc(userDocRef);
+    const peerArray = peerDoc.data().supportiveMarkedBy;
+    if (peerArray.includes(userInfo.email)) return;
+    const userArray = userDoc.data().supportiveMarkedTo;
+    if (userArray.includes(peerId)) return;
+    const newSupportive =
+      ((peerArray.length + 1) / peerDoc.data().peers.length) * 100;
+
+    await updateDoc(peerDocRef, {
+      supportiveMarkedBy: [...peerArray, userInfo.email],
+      supportive: newSupportive,
+    });
+    await updateDoc(userDocRef, {
+      supportiveMarkedTo: [...userArray, peerId],
+    });
+  };
+
+  const handleSupportedUnmarking = async (peerId) => {
+    if (userInfo.email === peerId) return;
+    const peerDocRef = doc(userInfodb, "users", peerId);
+    const peerDoc = await getDoc(peerDocRef);
+    const userDocRef = doc(userInfodb, "users", userInfo.email);
+    const userDoc = await getDoc(userDocRef);
+    const peerArray = peerDoc.data().supportiveMarkedBy;
+    if (!peerArray.includes(userInfo.email)) return;
+    const userArray = userDoc.data().supportiveMarkedTo;
+    if (!userArray.includes(peerId)) return;
+    const newSupportive =
+      ((peerArray.length - 1) / peerDoc.data().peers.length) * 100;
+    await updateDoc(peerDocRef, {
+      supportiveMarkedBy: peerArray.filter((x) => x !== userInfo.email),
+      supportive: newSupportive,
+    });
+    await updateDoc(userDocRef, {
+      supportiveMarkedTo: userArray.filter((x) => x !== peerId),
+    });
   };
 
   //data is stored at firestore;
@@ -112,21 +159,21 @@ export const SisoProvider = (props) => {
   };
 
   //geting user photo
-  const getUserPhoto = async(userId) => {
+  const getUserPhoto = async (userId) => {
     const docRef = doc(userInfodb, "users", userId);
     const theDocRef = await getDoc(docRef);
     return theDocRef.data().profilePic;
   };
 
   //getting user details of requested user
-  const getUserDetails = async(userId) => {
+  const getUserDetails = async (userId) => {
     const docRef = doc(userInfodb, "users", userId);
     const theDocRef = await getDoc(docRef);
     return theDocRef.data();
-  }
+  };
 
   //getting no of posts
-  const getNoOfPosts = async(userId) => {
+  const getNoOfPosts = async (userId) => {
     const docRef = doc(userInfodb, "users", userId);
     const theDocRef = await getDoc(docRef);
     const posts = theDocRef.data().posts;
@@ -140,9 +187,16 @@ export const SisoProvider = (props) => {
     return theDocRef.data().accomplishments;
   };
 
+  //getting supportive percentage
+  const getSupportivePercentage = async (userId) => {
+    const docRef = doc(userInfodb, "users", userId);
+    const theDocRef = await getDoc(docRef);
+    return theDocRef.data().supportive;
+  };
+
   //handling login and logout
   useEffect(() => {
-    onAuthStateChanged(appAuth, async(user) => {
+    onAuthStateChanged(appAuth, async (user) => {
       if (user) {
         await get_user_info(user.email);
         setLoggedIn(!loggedIn);
@@ -211,12 +265,34 @@ export const SisoProvider = (props) => {
           peers: doc.data().peers,
           joinedOn: doc.data().joinedOn,
           supportive: doc.data().supportive,
+          supportiveMarkedBy: doc.data().supportiveMarkedBy,
+          supportiveMarkedTo: doc.data().supportiveMarkedTo,
         }));
       });
     } else {
       alert("Internal server error");
     }
   };
+
+  //*****************peer details is feed here********************** */
+    const get_peer_info = async (emailId) => {
+      const userDocRef = doc(userInfodb, "users", emailId);
+      const theDocRef = await getDoc(userDocRef);
+      return ({
+        profileUrl: theDocRef.data().uniqueUserName,
+        first_name: theDocRef.data().first_name,
+        last_name: theDocRef.data().last_name,
+        email: theDocRef.data().email,
+        profilePic: theDocRef.data().profilePic,
+        posts: theDocRef.data().posts,
+        accomplishments: theDocRef.data().accomplishments,
+        peers: theDocRef.data().peers,
+        joinedOn: theDocRef.data().joinedOn,
+        supportive: theDocRef.data().supportive,
+        supportiveMarkedBy: theDocRef.data().supportiveMarkedBy,
+        supportiveMarkedTo: theDocRef.data().supportiveMarkedTo,
+      });
+    };
 
   const sign_out = () => {
     signOut(appAuth).then(() => {
@@ -261,16 +337,18 @@ export const SisoProvider = (props) => {
 
   //users own posts
   const getAllPosts = async () => {
-    const allPosts = userInfo && await getDocs(
-      collection(userInfodb, "users", userInfo.email, "userMotives")
-    );
-    allPosts && allPosts.forEach((doc) => {
-      setAllPosts((prevPosts) => {
-        return [...prevPosts, doc.data()];
+    const allPosts =
+      userInfo &&
+      (await getDocs(
+        collection(userInfodb, "users", userInfo.email, "userMotives")
+      ));
+    allPosts &&
+      allPosts.forEach((doc) => {
+        setAllPosts((prevPosts) => {
+          return [...prevPosts, doc.data()];
+        });
       });
-    });
   };
-
 
   useEffect(() => {
     getAllPosts();
@@ -297,14 +375,14 @@ export const SisoProvider = (props) => {
   }, []);
 
   //all users
-  useEffect(async() => {
-    const usersList = await getDocs(collection(userInfodb,"users"));
+  useEffect(async () => {
+    const usersList = await getDocs(collection(userInfodb, "users"));
     usersList.forEach((user) => {
       setAllUsers((prev) => {
         return [...prev, user.data()];
-      })
-    })
-  },[]);
+      });
+    });
+  }, []);
 
   const likedUsers = async (userId, postId) => {
     // const thePostRef = doc(userInfodb, "users", userId, "userMotives", postId);
@@ -489,26 +567,79 @@ export const SisoProvider = (props) => {
   };
 
   //adding peer
-  const addPeer = async(peerId) => {
-    const theUserRef = doc(userInfodb, "users" , userInfo.email);
+  const addPeer = async (peerId) => {
+    const theUserRef = doc(userInfodb, "users", userInfo.email);
     const theUserData = await getDoc(theUserRef);
-    const peers = theUserData.data().peers;
-    if(peers.includes(peerId))return;
+    const peerDocRef = doc(userInfodb, "users", peerId);
+    const peerDoc = await getDoc(peerDocRef);
+    const userspeers = theUserData.data().peers;
+    const peerspeers = peerDoc.data().peers;
+    if (userspeers.includes(peerId)) return;
+    if (peerspeers.includes(userInfo.email)) return;
+    const peerArray = peerDoc.data().supportiveMarkedBy;
+    const userArray = theUserData.data().supportiveMarkedBy;
+    const newUserSupportive =
+      (userArray.length / (theUserData.data().peers.length + 1)) * 100;
+    const newPeerSupportive =
+      (peerArray.length / (peerDoc.data().peers.length + 1)) * 100;
     await updateDoc(theUserRef, {
-      peers: [...peers, peerId],
+      peers: [...userspeers, peerId],
+      supportive: newUserSupportive,
     });
-  }
+    await updateDoc(peerDocRef, {
+      peers: [...peerspeers, userInfo.email],
+      supportive: newPeerSupportive,
+    });
+  };
 
   //remove peer
-  const removePeer = async(peerId) => {
-    const theUserRef = doc(userInfodb, "users" , userInfo.email);
+  const removePeer = async (peerId) => {
+    const theUserRef = doc(userInfodb, "users", userInfo.email);
     const theUserData = await getDoc(theUserRef);
-    const peers = theUserData.data().peers;
-    if(!peers.includes(peerId))return;
+    const peerDocRef = doc(userInfodb, "users", peerId);
+    const peerDoc = await getDoc(peerDocRef);
+    const userspeers = theUserData.data().peers;
+    const peerspeers = peerDoc.data().peers;
+    if (!userspeers.includes(peerId)) return;
+    if (!peerspeers.includes(userInfo.email)) return;
+    const peerArrayBy = peerDoc.data().supportiveMarkedBy;
+    const userArrayBy = theUserData.data().supportiveMarkedBy;
+    const peerArrayTo = peerDoc.data().supportiveMarkedTo;
+    const userArrayTo = theUserData.data().supportiveMarkedTo;
+    var newUserSupportive = theUserData.data().supportive;
+    var newPeerSupportive = peerDoc.data().supportive;
+    if (userArrayBy.includes(peerId) || userArrayBy.includes(peerId)) {
+      if (userArrayBy.includes(peerId))
+        newUserSupportive =
+          ((userArrayBy.length - 1) / (theUserData.data().peers.length - 1)) *
+          100;
+      await updateDoc(theUserRef, {
+        supportiveMarkedBy: userArrayBy.filter((x) => x !== peerId),
+        supportiveMarkedTo: userArrayTo.filter((x) => x !== peerId),
+      });
+    }
+    if (
+      peerArrayBy.includes(userInfo.email) ||
+      peerArrayTo.includes(userInfo.email)
+    ) {
+      if (peerArrayBy.includes(userInfo.email))
+        newPeerSupportive =
+          ((peerArrayBy.length - 1) / (peerDoc.data().peers.length - 1)) * 100;
+      await updateDoc(peerDocRef, {
+        supportiveMarkedBy: peerArrayBy.filter((x) => x !== userInfo.email),
+        supportiveMarkedTo: peerArrayTo.filter((x) => x !== userInfo.email),
+      });
+    }
+
     await updateDoc(theUserRef, {
-      peers: peers.filter((peer) => peer!== peerId),
+      peers: userspeers.filter((peer) => peer !== peerId),
+      supportive: newUserSupportive,
     });
-  }
+    await updateDoc(peerDocRef, {
+      peers: peerspeers.filter((peer) => peer !== userInfo.email),
+      supportive: newPeerSupportive,
+    });
+  };
 
   return (
     <SisoContext.Provider
@@ -537,10 +668,14 @@ export const SisoProvider = (props) => {
         accomplished,
         getNoOfPosts,
         getNoOfAccomplishments,
+        getSupportivePercentage,
         allUsers,
         addPeer,
         removePeer,
         getUserDetails,
+        handleSupportiveMarking,
+        handleSupportedUnmarking,
+        get_peer_info,
       }}
     >
       {props.children}
