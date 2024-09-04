@@ -5,8 +5,7 @@ import SingleChat from '../SingleChat/SingleChat'
 
 const UserChats = ({list}) => {
   if (list.length === 0)
-    return <h3 style={{ color: "white" }}>No users found</h3>
-    console.log(list);
+  return <h3 className="cuuwarning">No users found</h3>
   return (
     <>
       <div className="UserChatsmaincontainer">
